@@ -1,0 +1,36 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: signflow
+      POSTGRES_USER: signflow
+      POSTGRES_PASSWORD: local_dev_password
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U signflow"]
+      interval: 3s
+      retries: 20
+  api:
+    build: ./docker/api
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+    ports:
+      - '8000:8000'
+    depends_on:
+      db:
+        condition: service_healthy
+    command: sh -c 'php artisan serve --host=0.0.0.0 --port=8000'
+  flutter:
+    image: ghcr.io/cirruslabs/flutter:stable
+    working_dir: /app
+    volumes:
+      - ./flutter:/app
+      - flutter_cache:/root/.pub-cache
+    ports:
+      - '8080:8080'
+    command: sh -c 'flutter pub get && flutter run -d web-server --web-hostname=0.0.0.0 --web-port=8080'
+volumes:
+  pgdata:
+  flutter_cache:
